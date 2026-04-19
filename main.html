@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Log Calculator</title>
+  <script src="break_eternity.js"></script>
+  <style>
+    :root {
+      --bg-color: #0d0d0d;
+      --bg-radial: #000;
+      --container-bg: #111;
+      --input-bg: #222;
+      --text-color: #eee;
+      --accent-color: #00ffc8;
+      --shadow-color: rgba(0, 255, 200, 0.3);
+      --shadow-hover: rgba(0, 255, 200, 0.7);
+    }
+
+    [data-theme="synthwave"] {
+      --bg-color: #1a0b2e;
+      --bg-radial: #0d021c;
+      --container-bg: #2a114d;
+      --input-bg: #3c196b;
+      --accent-color: #ff00ff;
+      --shadow-color: rgba(255, 0, 255, 0.3);
+      --shadow-hover: rgba(255, 0, 255, 0.7);
+    }
+
+    [data-theme="deepsea"] {
+      --bg-color: #011627;
+      --bg-radial: #000a14;
+      --container-bg: #032b4d;
+      --input-bg: #064273;
+      --accent-color: #00e5ff;
+      --shadow-color: rgba(0, 229, 255, 0.3);
+      --shadow-hover: rgba(0, 229, 255, 0.7);
+    }
+
+    [data-theme="volcanic"] {
+      --bg-color: #2b0b0b;
+      --bg-radial: #140303;
+      --container-bg: #4a1515;
+      --input-bg: #6b2121;
+      --accent-color: #ff4500;
+      --shadow-color: rgba(255, 69, 0, 0.3);
+      --shadow-hover: rgba(255, 69, 0, 0.7);
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: radial-gradient(circle at center, var(--bg-color), var(--bg-radial));
+      color: var(--text-color);
+      font-family: Arial, sans-serif;
+      transition: background 0.5s;
+      overflow: hidden;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+
+    .wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      z-index: 10;
+      width: 500px;
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+
+    .container {
+      text-align: center;
+      background: var(--container-bg);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 0 40px var(--shadow-color);
+      transition: all 0.5s ease-in-out;
+      position: relative;
+    }
+
+    .theme-picker {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .theme-btn {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      transition: transform 0.2s;
+    }
+
+    .theme-btn:hover {
+      transform: scale(1.2);
+    }
+
+    .theme-btn[data-theme="matrix"] {
+      background: #00ffc8;
+    }
+
+    .theme-btn[data-theme="synthwave"] {
+      background: #ff00ff;
+    }
+
+    .theme-btn[data-theme="deepsea"] {
+      background: #00e5ff;
+    }
+
+    .theme-btn[data-theme="volcanic"] {
+      background: #ff4500;
+    }
+
+    input {
+      width: 180px;
+      padding: 12px;
+      margin: 12px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      text-align: center;
+      font-size: 16px;
+      background: var(--input-bg);
+      color: #fff;
+      box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
+      transition: box-shadow 0.2s, background 0.5s;
+    }
+
+    input:focus {
+      box-shadow: inset 0 0 8px var(--shadow-hover);
+    }
+
+    .inputs-row {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 5px;
+    }
+
+    .format-btn,
+    .math-btn {
+      background: var(--input-bg);
+      color: var(--accent-color);
+      border: 1px solid var(--shadow-color);
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .format-btn.active,
+    .format-btn:hover,
+    .math-btn:hover {
+      background: var(--accent-color);
+      color: #000;
+      box-shadow: 0 0 10px var(--shadow-color);
+    }
+
+    .hint {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #aaa;
+      text-shadow: 0 0 6px var(--shadow-color);
+    }
+
+    .result-container {
+      margin-top: 20px;
+      position: relative;
+    }
+
+    .result {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--accent-color);
+      cursor: pointer;
+      position: relative;
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 8px;
+      transition: all 0.2s;
+      text-shadow: 0 0 10px var(--shadow-hover);
+      word-break: break-all;
+    }
+
+    .result:hover {
+      background: rgba(255, 255, 255, 0.05);
+      transform: scale(1.02);
+    }
+
+    .result.copied::after {
+      content: "Copied!";
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: #fff;
+      background: var(--accent-color);
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-shadow: none;
+      animation: floatUp 0.8s ease forwards;
+    }
+
+    .history {
+      background: var(--container-bg);
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 0 20px var(--shadow-color);
+      height: 150px;
+      overflow-y: auto;
+      text-align: left;
+      font-size: 14px;
+      color: #ccc;
+      transition: all 0.5s ease;
+    }
+
+    .history::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .history::-webkit-scrollbar-thumb {
+      background: var(--accent-color);
+      border-radius: 3px;
+    }
+
+    .history-item {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      animation: slideIn 0.3s ease-out;
+      cursor: pointer;
+      transition: color 0.2s;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .history-item:hover {
+      color: var(--accent-color);
+    }
+
+    .history-item span {
+      color: var(--accent-color);
+      font-weight: bold;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes floatUp {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -20px);
+      }
+    }
+
+    .footer {
+      position: fixed;
+      bottom: 10px;
+      right: 15px;
+      font-size: 14px;
+      color: var(--accent-color);
+      text-shadow: 0 0 8px var(--shadow-hover);
+      font-style: italic;
+      user-select: none;
+      transition: color 0.5s;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div class="wrapper">
+    <div class="container">
+      <div class="theme-picker">
+        <div class="theme-btn" data-theme="matrix" onclick="setTheme('')" title="Matrix"></div>
+        <div class="theme-btn" data-theme="synthwave" onclick="setTheme('synthwave')" title="Synthwave"></div>
+        <div class="theme-btn" data-theme="deepsea" onclick="setTheme('deepsea')" title="Deep Sea"></div>
+        <div class="theme-btn" data-theme="volcanic" onclick="setTheme('volcanic')" title="Volcanic"></div>
+      </div>
+
+      <h1>Log Calculator</h1>
+      <div class="inputs-row">
+        <input type="text" id="base" placeholder="X (base)">
+        <input type="text" id="number" placeholder="Number / Expression">
+      </div>
+
+      <div class="btn-row">
+        <button class="math-btn" onclick="insertMath('exp()')">exp()</button>
+        <button class="math-btn" onclick="insertMath('^')">^</button>
+        <button class="math-btn" onclick="insertMath('1e')">1e</button>
+        <button class="math-btn" onclick="insertMath('ee')">ee</button>
+      </div>
+
+      <div class="hint">
+        💡 Supports <code>1e1000</code>, <code>3^0.45</code>, <code>10ee10</code>, <code>(2+3)*10</code>
+      </div>
+
+      <div class="result-container">
+        <div class="btn-row" style="margin-bottom: 15px;">
+          <button class="format-btn active" onclick="setFormat('scientific')" id="fmt-scientific">Scientific</button>
+          <button class="format-btn" onclick="setFormat('standard')" id="fmt-standard">Standard</button>
+        </div>
+        <div class="result" id="result" onclick="copyResult()"></div>
+      </div>
+    </div>
+
+    <div class="history" id="history">
+      <div style="opacity: 0.5; text-align: center; margin-top: 50px;">History will appear here</div>
+    </div>
+  </div>
+
+  <div class="footer">Coded by Shoober</div>
+
+  <script>
+    // --- Canvas Particles ---
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    let particles = [];
+    let accentRgb = "0, 255, 200";
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 2 + 0.5;
+        this.vy = -Math.random() * 0.5 - 0.2;
+        this.char = ['0', '1', 'e', '+'][Math.floor(Math.random() * 4)];
+        this.opacity = Math.random() * 0.5;
+      }
+      update() {
+        this.y += this.vy;
+        if (this.y < -10) this.y = canvas.height + 10;
+      }
+      draw() {
+        ctx.fillStyle = `rgba(${accentRgb}, ${this.opacity})`;
+        ctx.font = `${this.size * 5}px monospace`;
+        ctx.fillText(this.char, this.x, this.y);
+      }
+    }
+
+    for (let i = 0; i < 50; i++) particles.push(new Particle());
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => { p.update(); p.draw(); });
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // --- Theming ---
+    function setTheme(theme) {
+      if (theme) {
+        document.body.setAttribute('data-theme', theme);
+      } else {
+        document.body.removeAttribute('data-theme');
+      }
+      if (theme === 'synthwave') accentRgb = "255, 0, 255";
+      else if (theme === 'deepsea') accentRgb = "0, 229, 255";
+      else if (theme === 'volcanic') accentRgb = "255, 69, 0";
+      else accentRgb = "0, 255, 200";
+    }
+
+    // --- State ---
+    let currentFormat = 'scientific';
+    let lastCopiedValue = "";
+
+    Decimal.prototype.toFormat = function (places) {
+      if (currentFormat === 'standard' && this.lt(1e6)) {
+        return this.toNumber().toLocaleString(undefined, { maximumFractionDigits: places });
+      }
+      if (this.m === 1 && this.e > 100) return 'e' + this.e;
+      return this.m.toFixed(places) + 'e' + this.e;
+    };
+
+    function setFormat(fmt) {
+      currentFormat = fmt;
+      document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('fmt-' + fmt).classList.add('active');
+      calculateLog();
+    }
+
+    function insertMath(str) {
+      const input = document.getElementById("number");
+      const cursor = input.selectionStart || input.value.length;
+      const v = input.value;
+      input.value = v.slice(0, cursor) + str + v.slice(cursor);
+      input.focus();
+
+      let newCursor = cursor + str.length;
+      if (str === 'exp()') newCursor -= 1; // Put cursor inside parens
+
+      input.setSelectionRange(newCursor, newCursor);
+      calculateLog();
+    }
+
+    // --- Parser with extended math ---
+    function parseInput(expr) {
+      if (!/^[0-9eE+\-*/^().\sxp]+$/.test(expr)) {  // Added exp/p
+        throw new Error("invalid expression");
+      }
+      expr = expr.replace(/\s+/g, '');
+
+      // Handle "exp(X)" and "ee" (tetration shorthand trick)
+      expr = expr.replace(/ee/g, 'e1e');
+      expr = expr.replace(/exp\(([^)]+)\)/g, '2.718281828459045^($1)');
+
+      const tokens = expr.match(/(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d*(?:\.\d*)?(?:[eE][+-]?\d+)?)?|[+\-*/^()]/g);
+      if (!tokens) throw new Error("invalid expression");
+
+      const processedTokens = [];
+      for (let i = 0; i < tokens.length; i++) {
+        let t = tokens[i];
+        if (t === '-' || t === '+') {
+          let prev = i > 0 ? tokens[i - 1] : null;
+          if (!prev || (/[+\-*/^()]/.test(prev) && prev !== ')')) {
+            processedTokens.push(t === '-' ? 'u-' : 'u+');
+            continue;
+          }
+        }
+        processedTokens.push(t);
+      }
+
+      const precedence = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3, 'u-': 4, 'u+': 4 };
+      const isRightAssoc = { '^': true, 'u-': true, 'u+': true };
+
+      const output = [];
+      const ops = [];
+
+      for (const token of processedTokens) {
+        if (!isNaN(token[0]) || token[0] === '.' || token.includes('e')) {
+          output.push(new Decimal(token));
+        } else if (token === '(') {
+          ops.push(token);
+        } else if (token === ')') {
+          while (ops.length && ops[ops.length - 1] !== '(') {
+            output.push(ops.pop());
+          }
+          ops.pop();
+        } else {
+          while (ops.length > 0 && ops[ops.length - 1] !== '(') {
+            const top = ops[ops.length - 1];
+            if ((!isRightAssoc[token] && precedence[token] <= precedence[top]) ||
+              (isRightAssoc[token] && precedence[token] < precedence[top])) {
+              output.push(ops.pop());
+            } else {
+              break;
+            }
+          }
+          ops.push(token);
+        }
+      }
+
+      while (ops.length) {
+        output.push(ops.pop());
+      }
+
+      const stack = [];
+      for (const token of output) {
+        if (token instanceof Decimal) {
+          stack.push(token);
+        } else if (token === 'u-') {
+          stack.push(stack.pop().neg());
+        } else if (token === 'u+') {
+        } else {
+          const b = stack.pop();
+          const a = stack.pop();
+          if (!a || !b) throw new Error("invalid expression");
+          switch (token) {
+            case '+': stack.push(a.add(b)); break;
+            case '-': stack.push(a.sub(b)); break;
+            case '*': stack.push(a.mul(b)); break;
+            case '/': stack.push(a.div(b)); break;
+            case '^': stack.push(a.pow(b)); break;
+          }
+        }
+      }
+      if (stack.length !== 1) throw new Error("invalid expression");
+      return stack[0];
+    }
+
+    let historyLog = [];
+
+    function addToHistory(formula, answer) {
+      if (historyLog.length > 0 && historyLog[0].formula === formula) return;
+      historyLog.unshift({ formula, answer });
+      if (historyLog.length > 15) historyLog.pop();
+
+      const histEl = document.getElementById("history");
+      histEl.innerHTML = historyLog.map(h =>
+        `<div class="history-item" onclick="document.getElementById('number').value='${h.formula.split(' ')[0]}'; calculateLog();">
+          <div>${h.formula}</div> <span>${h.answer}</span>
+        </div>`
+      ).join('');
+    }
+
+    let typingTimer;
+    function calculateLog() {
+      const baseInput = document.getElementById("base").value.trim();
+      const numberInput = document.getElementById("number").value.trim();
+      const resultEl = document.getElementById("result");
+
+      if (!baseInput || !numberInput) {
+        resultEl.innerText = "";
+        return;
+      }
+
+      try {
+        const base = parseInput(baseInput);
+        const number = parseInput(numberInput);
+
+        if (base.lte(1)) {
+          resultEl.innerText = "base must be > 1";
+        } else if (number.lte(0)) {
+          resultEl.innerText = "number must be > 0";
+        } else {
+          const logValue = Decimal.log(number, base);
+          const finalStr = logValue.toFormat(3);
+          resultEl.innerText = finalStr;
+          lastCopiedValue = finalStr;
+
+          // Add to history after a short delay so typing doesn't spam it
+          clearTimeout(typingTimer);
+          typingTimer = setTimeout(() => {
+            addToHistory(`log${baseInput} (${numberInput})`, finalStr);
+          }, 800);
+        }
+      } catch (err) {
+        resultEl.innerText = "Error";
+      }
+    }
+
+    function copyResult() {
+      if (!lastCopiedValue || document.getElementById("result").innerText === "Error") return;
+      navigator.clipboard.writeText(lastCopiedValue);
+      const res = document.getElementById("result");
+      res.classList.remove("copied");
+      void res.offsetWidth;
+      res.classList.add("copied");
+    }
+
+    document.getElementById("base").addEventListener("input", calculateLog);
+    document.getElementById("number").addEventListener("input", calculateLog);
+  </script>
+</body>
+
+</html>
